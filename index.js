@@ -511,7 +511,8 @@ function buildSettings() {
                 <b>Plot Planner</b>
                 <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
             </div>
-            <div class="inline-drawer-content pp-settings">
+            <div class="inline-drawer-content">
+                <div class="pp-settings">
                 <label>개요 생성 연결 프로필
                     <select id="pp_profile" class="text_pole"></select>
                 </label>
@@ -547,6 +548,7 @@ function buildSettings() {
                 </label>
                 <div class="pp-row">
                     <button type="button" id="pp_reset" class="menu_button">지침 기본값으로</button>
+                </div>
                 </div>
             </div>
         </div>
