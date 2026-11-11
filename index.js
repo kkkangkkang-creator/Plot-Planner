@@ -404,8 +404,14 @@ function updateButtonState() {
 
 let panel = null;
 
+function updateTitle() {
+    if (!panel) return;
+    panel.querySelector('.pp-title').textContent = `#${ctx().chat.length} 장면 개요`;
+}
+
 function openPanel() {
     if (!panel) buildPanel();
+    updateTitle();
     document.activeElement?.blur?.();
     if (!panel.open) panel.showModal();
     renderActive();
@@ -468,11 +474,34 @@ function buildPanel() {
     });
 }
 
+let timerId = null;
+let timerStart = 0;
+
 function setStatus(text, kind) {
     if (!panel) buildPanel();
     const el = panel.querySelector('.pp-status');
-    el.textContent = text;
     el.dataset.kind = kind || '';
+    el.dataset.text = text;
+    if (kind === 'busy') {
+        if (!timerId) {
+            timerStart = Date.now();
+            timerId = setInterval(tickStatus, 1000);
+        }
+    } else if (timerId) {
+        clearInterval(timerId);
+        timerId = null;
+        text += ` · ${Math.round((Date.now() - timerStart) / 1000)}s`;
+    }
+    el.textContent = kind === 'busy' ? `${text} ${elapsed()}` : text;
+}
+
+function elapsed() {
+    return `${Math.floor((Date.now() - timerStart) / 1000)}s`;
+}
+
+function tickStatus() {
+    const el = panel?.querySelector('.pp-status');
+    if (el?.dataset.kind === 'busy') el.textContent = `${el.dataset.text} ${elapsed()}`;
 }
 
 function renderButtons() {
