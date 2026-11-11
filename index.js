@@ -274,8 +274,13 @@ async function runPlanning(append) {
     }
 }
 
+function currentInput() {
+    return String(document.getElementById('send_textarea')?.value ?? '').trim();
+}
+
 function commitPlots(append, existing, fresh) {
     const meta = getMeta();
+    meta.basis = { userCount: countUserMessages(), input: currentInput() };
     meta.plots = append ? [...existing, ...fresh] : fresh.slice();
     if (!append) meta.selected = 0;
     if (meta.selected >= meta.plots.length) meta.selected = 0;
@@ -351,7 +356,17 @@ function openPanel() {
     renderActive();
     renderPlots();
     renderButtons();
-    if (!planning && !getMeta().plots.length) runPlanning(false);
+    if (planning) return;
+    // Plots belong to the turn (and input) they were made for; anything older is regenerated.
+    const meta = getMeta();
+    const b = meta.basis;
+    const stale = !b || b.userCount !== countUserMessages() || b.input !== currentInput();
+    if (!meta.plots.length || stale) {
+        meta.plots = [];
+        meta.selected = 0;
+        saveMeta();
+        runPlanning(false);
+    }
 }
 
 function closePanel() {
