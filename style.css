@@ -1,0 +1,239 @@
+/* Plot Planner — follows the active ST theme colors */
+
+#plot_planner_btn.pp-armed {
+    color: var(--SmartThemeQuoteColor);
+    opacity: 1;
+}
+
+#plot_planner_overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(0, 0, 0, 0.35);
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+}
+
+#plot_planner_overlay.open {
+    display: flex;
+}
+
+#plot_planner_overlay .pp-sheet {
+    width: 100%;
+    max-width: 640px;
+    max-height: 86dvh;
+    display: flex;
+    flex-direction: column;
+    background: var(--SmartThemeBlurTintColor);
+    backdrop-filter: blur(var(--SmartThemeBlurStrength, 10px));
+    color: var(--SmartThemeBodyColor);
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 6px;
+    font-size: 0.92em;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+}
+
+#plot_planner_overlay .pp-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 9px 12px 7px;
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+}
+
+#plot_planner_overlay .pp-title {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+#plot_planner_overlay .pp-status {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.85em;
+    opacity: 0.65;
+    overflow-wrap: anywhere;
+}
+
+#plot_planner_overlay .pp-status[data-kind="busy"] {
+    opacity: 0.9;
+}
+
+#plot_planner_overlay .pp-status[data-kind="error"] {
+    opacity: 1;
+    color: #c0503c;
+}
+
+#plot_planner_overlay .pp-close {
+    cursor: pointer;
+    opacity: 0.6;
+    padding: 0 2px;
+}
+
+#plot_planner_overlay .pp-close:hover {
+    opacity: 1;
+}
+
+#plot_planner_overlay .pp-active {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    font-size: 0.85em;
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+    color: var(--SmartThemeQuoteColor);
+}
+
+#plot_planner_overlay .pp-active[hidden] {
+    display: none;
+}
+
+#plot_planner_overlay .pp-active span {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#plot_planner_overlay .pp-list {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+
+#plot_planner_overlay .pp-empty {
+    padding: 18px 12px;
+    font-size: 0.85em;
+    opacity: 0.55;
+}
+
+#plot_planner_overlay .pp-plot {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 8px 10px 8px 8px;
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+    border-left: 2px solid transparent;
+}
+
+#plot_planner_overlay .pp-plot:last-child {
+    border-bottom: none;
+}
+
+#plot_planner_overlay .pp-plot.selected {
+    border-left-color: var(--SmartThemeQuoteColor);
+}
+
+#plot_planner_overlay .pp-num {
+    flex: none;
+    width: 1.4em;
+    padding-top: 3px;
+    text-align: center;
+    font-size: 0.85em;
+    opacity: 0.5;
+    cursor: pointer;
+    user-select: none;
+}
+
+#plot_planner_overlay .pp-plot.selected .pp-num {
+    opacity: 1;
+    font-weight: 700;
+    color: var(--SmartThemeQuoteColor);
+}
+
+#plot_planner_overlay .pp-text {
+    flex: 1;
+    min-width: 0;
+    resize: none;
+    overflow: hidden;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    line-height: 1.5;
+    padding: 2px 0;
+    margin: 0;
+}
+
+#plot_planner_overlay .pp-del {
+    flex: none;
+    padding-top: 4px;
+    font-size: 0.8em;
+    opacity: 0.3;
+    cursor: pointer;
+}
+
+#plot_planner_overlay .pp-del:hover {
+    opacity: 0.8;
+}
+
+#plot_planner_overlay .pp-foot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+    padding: 8px 12px;
+    border-top: 1px solid var(--SmartThemeBorderColor);
+}
+
+#plot_planner_overlay .pp-spacer {
+    flex: 1;
+}
+
+#plot_planner_overlay .pp-btn {
+    background: none;
+    border: none;
+    padding: 2px 0;
+    color: inherit;
+    font: inherit;
+    font-size: 0.9em;
+    opacity: 0.75;
+    cursor: pointer;
+}
+
+#plot_planner_overlay .pp-btn:hover {
+    opacity: 1;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+#plot_planner_overlay .pp-btn[hidden] {
+    display: none;
+}
+
+#plot_planner_overlay .pp-primary {
+    opacity: 1;
+    font-weight: 600;
+    color: var(--SmartThemeQuoteColor);
+}
+
+/* settings drawer */
+#plot_planner_settings .pp-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+#plot_planner_settings .pp-settings label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 0.9em;
+}
+
+#plot_planner_settings .pp-row {
+    display: flex;
+    gap: 8px;
+}
+
+#plot_planner_settings .pp-row > label {
+    flex: 1;
+}
+
+#plot_planner_settings .pp-hint {
+    opacity: 0.6;
+    line-height: 1.4;
+}
