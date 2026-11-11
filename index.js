@@ -413,6 +413,7 @@ function renderButtons() {
     show('retry', !planning && failed);
     show('cancel', planning);
     show('send', !planning && meta.plots.length > 0);
+    panel.querySelector('[data-act="send"]').textContent = `${meta.selected + 1}번 개요로 전송`;
 }
 
 function autosize(ta) {
@@ -471,8 +472,9 @@ function renderPlots() {
             getMeta().selected = i;
             saveMeta();
             list.querySelectorAll('.pp-plot').forEach((el, j) => el.classList.toggle('selected', j === i));
+            renderButtons();
         };
-        num.addEventListener('click', select);
+        row.addEventListener('click', select);
         ta.addEventListener('focus', select);
 
         row.append(num, ta, del);

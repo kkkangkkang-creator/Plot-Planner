@@ -114,15 +114,20 @@
     gap: 6px;
     padding: 8px 10px 8px 8px;
     border-bottom: 1px solid var(--SmartThemeBorderColor);
-    border-left: 2px solid transparent;
+    border-left: 3px solid transparent;
 }
 
 #plot_planner_overlay .pp-plot:last-child {
     border-bottom: none;
 }
 
+#plot_planner_overlay .pp-plot {
+    cursor: pointer;
+}
+
 #plot_planner_overlay .pp-plot.selected {
-    border-left-color: var(--SmartThemeQuoteColor);
+    border-left: 3px solid var(--SmartThemeQuoteColor);
+    background: color-mix(in srgb, var(--SmartThemeQuoteColor) 10%, transparent);
 }
 
 #plot_planner_overlay .pp-num {
@@ -140,6 +145,17 @@
     opacity: 1;
     font-weight: 700;
     color: var(--SmartThemeQuoteColor);
+}
+
+#plot_planner_overlay .pp-num::before {
+    content: '○';
+    display: block;
+    font-size: 0.9em;
+    line-height: 1.2;
+}
+
+#plot_planner_overlay .pp-plot.selected .pp-num::before {
+    content: '●';
 }
 
 #plot_planner_overlay .pp-text {
