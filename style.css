@@ -239,6 +239,12 @@
     font-size: 0.9em;
 }
 
+#plot_planner_settings .pp-settings label.pp-check {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+}
+
 #plot_planner_settings .pp-row {
     display: flex;
     gap: 8px;

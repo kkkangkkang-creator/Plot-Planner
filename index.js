@@ -33,6 +33,7 @@ const DEFAULT_INJECT_TEMPLATE = `[이번 답변 개요]
 
 const defaultSettings = Object.freeze({
     profileId: '',          // '' = current connection
+    alwaysPlan: false,      // normal send opens the planner instead of replying
     count: 3,
     mode: 'single',         // 'single' | 'sequential'
     maxTokens: 8000,
@@ -94,23 +95,52 @@ function buildInjection(plotText) {
     return ctx().substituteParams(body);
 }
 
-// Runs right before every real (non-dry) generation.
-globalThis.plotPlannerInterceptor = async function (_chat, _contextSize, _abort, type) {
-    clearInjection();
-    if (!ctx().chatMetadata) return;
-    const meta = getMeta();
-    if (!meta.active) return;
-    if (type === 'quiet' || type === 'impersonate') return;
+// One-shot flags for the next real generation.
+// Stored as timestamps so a send that never reached generation can't leave a flag armed.
+let planNext = 0;   // branch button: post the user's message, then plan instead of replying
+let bypassNext = 0; // "send without plot"
+const FLAG_TTL = 20000;
+const armed = (t) => t && Date.now() - t < FLAG_TTL;
 
+function stopAndPlan(abort) {
+    abort(true);
+    setTimeout(openPanel, 0);
+}
+
+// Runs right before every real (non-dry) generation, after the user's message is in the chat.
+globalThis.plotPlannerInterceptor = async function (_chat, _contextSize, abort, type) {
+    clearInjection();
+    if (type === 'quiet' || type === 'impersonate') return;
+    if (!ctx().chatMetadata) return;
+
+    if (armed(planNext)) {
+        planNext = 0;
+        stopAndPlan(abort);
+        return;
+    }
+    if (armed(bypassNext)) {
+        bypassNext = 0;
+        return;
+    }
+
+    const meta = getMeta();
     const users = countUserMessages();
-    if (users === meta.active.userCount) {
-        const s = getSettings();
-        ctx().setExtensionPrompt(INJECT_KEY, buildInjection(meta.active.text), 1, Number(s.depth), false, Number(s.role));
-    } else if (users > meta.active.userCount) {
-        // The conversation moved past the planned reply — drop the plot.
-        meta.active = null;
-        saveMeta();
-        updateButtonState();
+    if (meta.active) {
+        if (users === meta.active.userCount) {
+            const s = getSettings();
+            ctx().setExtensionPrompt(INJECT_KEY, buildInjection(meta.active.text), 1, Number(s.depth), false, Number(s.role));
+            return;
+        }
+        if (users > meta.active.userCount) {
+            // The conversation moved past the planned reply — drop the plot.
+            meta.active = null;
+            saveMeta();
+            updateButtonState();
+        }
+    }
+
+    if (getSettings().alwaysPlan && type === 'normal') {
+        stopAndPlan(abort);
     }
 };
 
@@ -293,6 +323,22 @@ function cancelPlanning() {
     if (!getSettings().profileId) ctx().stopGeneration();
 }
 
+function clickSend() {
+    const sendBtn = document.getElementById('send_but');
+    if (!sendBtn || sendBtn.classList.contains('displayNone')) {
+        toastr.warning('지금은 보낼 수 없어요. 생성이 끝난 뒤 다시 눌러 주세요.');
+        return false;
+    }
+    sendBtn.click();
+    return true;
+}
+
+function sendWithoutPlot() {
+    bypassNext = Date.now();
+    closePanel();
+    if (!clickSend()) bypassNext = 0;
+}
+
 function sendSelected() {
     const meta = getMeta();
     const text = (meta.plots[meta.selected] ?? '').trim();
@@ -300,17 +346,11 @@ function sendSelected() {
         toastr.warning('보낼 개요가 비어 있어요.');
         return;
     }
-    const sendBtn = document.getElementById('send_but');
-    if (!sendBtn || sendBtn.classList.contains('displayNone')) {
-        toastr.warning('지금은 보낼 수 없어요. 생성이 끝난 뒤 다시 눌러 주세요.');
-        return;
-    }
-    const input = String(document.getElementById('send_textarea')?.value ?? '').trim();
-    meta.active = { text, userCount: countUserMessages() + (input ? 1 : 0) };
+    meta.active = { text, userCount: countUserMessages() + (currentInput() ? 1 : 0) };
     saveMeta();
     updateButtonState();
     closePanel();
-    sendBtn.click();
+    clickSend();
 }
 
 function releaseActive() {
@@ -333,8 +373,23 @@ function addInputButton() {
     btn.className = 'fa-solid fa-code-branch interactable';
     btn.title = '다음 장면 개요';
     btn.tabIndex = 0;
-    btn.addEventListener('click', openPanel);
+    btn.addEventListener('click', onBranchClick);
     sendBtn.parentElement.insertBefore(btn, sendBtn);
+}
+
+function onBranchClick() {
+    const input = currentInput();
+    if (!input) {
+        openPanel();
+        return;
+    }
+    if (input.startsWith('/')) {
+        toastr.warning('슬래시 커맨드 입력에는 쓸 수 없어요.');
+        return;
+    }
+    // Let ST post the message normally; the interceptor stops the reply and opens the planner.
+    planNext = Date.now();
+    if (!clickSend()) planNext = 0;
 }
 
 function updateButtonState() {
@@ -392,6 +447,7 @@ function buildPanel() {
                 <button type="button" class="pp-btn" data-act="retry">다시 시도</button>
                 <button type="button" class="pp-btn" data-act="cancel">취소</button>
                 <span class="pp-spacer"></span>
+                <button type="button" class="pp-btn" data-act="plain">개요 없이 전송</button>
                 <button type="button" class="pp-btn pp-primary" data-act="send">이 개요로 전송</button>
             </div>
         </div>`;
@@ -408,6 +464,7 @@ function buildPanel() {
         else if (act === 'retry') runPlanning(lastAction === 'more');
         else if (act === 'cancel') cancelPlanning();
         else if (act === 'send') sendSelected();
+        else if (act === 'plain') sendWithoutPlot();
     });
 }
 
@@ -428,6 +485,7 @@ function renderButtons() {
     show('retry', !planning && failed);
     show('cancel', planning);
     show('send', !planning && meta.plots.length > 0);
+    show('plain', !planning);
     panel.querySelector('[data-act="send"]').textContent = `${meta.selected + 1}번 개요로 전송`;
 }
 
@@ -533,6 +591,10 @@ function buildSettings() {
             </div>
             <div class="inline-drawer-content">
                 <div class="pp-settings">
+                <label class="checkbox_label pp-check">
+                    <input id="pp_always" type="checkbox">
+                    <span>전송 시 항상 개요 먼저</span>
+                </label>
                 <label>개요 생성 연결 프로필
                     <select id="pp_profile" class="text_pole"></select>
                 </label>
@@ -600,6 +662,8 @@ function buildSettings() {
         el.value = s[key];
         el.addEventListener('input', () => { getSettings()[key] = cast(el.value); save(); });
     };
+    $('pp_always').checked = !!s.alwaysPlan;
+    $('pp_always').addEventListener('change', (e) => { getSettings().alwaysPlan = e.target.checked; save(); });
     bind('pp_count', 'count', Number);
     bind('pp_mode', 'mode');
     bind('pp_max', 'maxTokens', Number);
