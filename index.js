@@ -77,7 +77,15 @@ function saveMeta() {
 }
 
 function countUserMessages() {
-    return ctx().chat.filter(m => m.is_user && !m.is_system).length;
+    return ctx().chat.filter(m => m.is_user).length;
+}
+
+function lastUserDate() {
+    const chat = ctx().chat;
+    for (let i = chat.length - 1; i >= 0; i--) {
+        if (chat[i].is_user) return String(chat[i].send_date ?? '');
+    }
+    return '';
 }
 
 // ---------- injection (one reply slot) ----------
@@ -90,7 +98,7 @@ function clearInjection() {
 function buildInjection(plotText) {
     const s = getSettings();
     const body = s.injectTemplate.includes('{{plot}}')
-        ? s.injectTemplate.replace('{{plot}}', plotText)
+        ? s.injectTemplate.replace('{{plot}}', () => plotText)
         : `${s.injectTemplate}\n\n${plotText}`;
     return ctx().substituteParams(body);
 }
@@ -126,13 +134,20 @@ globalThis.plotPlannerInterceptor = async function (_chat, _contextSize, abort, 
     const meta = getMeta();
     const users = countUserMessages();
     if (meta.active) {
-        if (users === meta.active.userCount) {
+        const a = meta.active;
+        // First generation for this plot pins it to the user message it answers,
+        // so deleting and re-sending a different message can't inherit it.
+        if (users === a.userCount && !a.userDate) {
+            a.userDate = lastUserDate();
+            saveMeta();
+        }
+        if (users === a.userCount && a.userDate === lastUserDate()) {
             const s = getSettings();
             ctx().setExtensionPrompt(INJECT_KEY, buildInjection(meta.active.text), 1, Number(s.depth), false, Number(s.role));
             return;
         }
-        if (users > meta.active.userCount) {
-            // The conversation moved past the planned reply — drop the plot.
+        if (users >= a.userCount) {
+            // The conversation moved past (or replaced) the planned reply — drop the plot.
             meta.active = null;
             saveMeta();
             updateButtonState();
@@ -267,6 +282,11 @@ async function runPlanning(append) {
 
     const existing = append ? meta.plots.slice() : [];
     const fresh = [];
+    const origin = { chatId: ctx().getCurrentChatId(), userCount: countUserMessages(), input };
+    const commit = () => {
+        if (ctx().getCurrentChatId() !== origin.chatId) return; // chat switched mid-request
+        commitPlots(append, existing, fresh, origin);
+    };
 
     try {
         const base = await capturePrompt();
@@ -278,7 +298,7 @@ async function runPlanning(append) {
                 const got = parsePlots(raw);
                 if (!got.length) throw new Error('빈 응답이 왔어요.');
                 fresh.push(got[0]);
-                commitPlots(append, existing, fresh);
+                commit();
             }
         } else {
             setStatus('개요 생성 중…', 'busy');
@@ -286,13 +306,13 @@ async function runPlanning(append) {
             const got = parsePlots(raw);
             if (!got.length) throw new Error('빈 응답이 왔어요.');
             fresh.push(...got);
-            commitPlots(append, existing, fresh);
+            commit();
         }
         setStatus(`${fresh.length}개 생성됨`, '');
     } catch (e) {
         console.error(`[${MODULE}]`, e);
         if (fresh.length) {
-            commitPlots(append, existing, fresh);
+            commit();
             lastAction = 'more'; // retry keeps what already came back
         }
         const aborted = abortCtrl?.signal.aborted;
@@ -308,9 +328,9 @@ function currentInput() {
     return String(document.getElementById('send_textarea')?.value ?? '').trim();
 }
 
-function commitPlots(append, existing, fresh) {
+function commitPlots(append, existing, fresh, origin) {
     const meta = getMeta();
-    meta.basis = { userCount: countUserMessages(), input: currentInput() };
+    meta.basis = { userCount: origin.userCount, input: origin.input };
     meta.plots = append ? [...existing, ...fresh] : fresh.slice();
     if (!append) meta.selected = 0;
     if (meta.selected >= meta.plots.length) meta.selected = 0;
@@ -725,6 +745,7 @@ function buildSettings() {
     c.eventSource.on(c.event_types.GENERATION_STOPPED, clear);
 
     c.eventSource.on(c.event_types.CHAT_CHANGED, () => {
+        if (planning) abortCtrl?.abort();
         closePanel();
         clearInjection();
         updateButtonState();

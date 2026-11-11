@@ -7,7 +7,7 @@
     "js": "index.js",
     "css": "style.css",
     "author": "Xasha",
-    "version": "0.2.1",
+    "version": "0.2.2",
     "homePage": "https://github.com/kkkangkkang-creator/Plot-Planner",
     "auto_update": true,
     "generate_interceptor": "plotPlannerInterceptor"
