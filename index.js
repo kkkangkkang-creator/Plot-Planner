@@ -232,6 +232,7 @@ async function runPlanning(append) {
     planning = true;
     abortCtrl = new AbortController();
     setStatus('프롬프트 확인 중…', 'busy');
+    renderPlots();
     renderButtons();
 
     const existing = append ? meta.plots.slice() : [];
@@ -345,7 +346,8 @@ let panel = null;
 
 function openPanel() {
     if (!panel) buildPanel();
-    panel.classList.add('open');
+    document.activeElement?.blur?.();
+    if (!panel.open) panel.showModal();
     renderActive();
     renderPlots();
     renderButtons();
@@ -353,11 +355,12 @@ function openPanel() {
 }
 
 function closePanel() {
-    panel?.classList.remove('open');
+    if (panel?.open) panel.close();
 }
 
 function buildPanel() {
-    panel = document.createElement('div');
+    // <dialog> renders in the browser top layer, so theme/mobile layouts can't push it off-screen.
+    panel = document.createElement('dialog');
     panel.id = 'plot_planner_overlay';
     panel.innerHTML = `
         <div class="pp-sheet" role="dialog" aria-label="다음 장면 개요">
@@ -426,7 +429,7 @@ function renderPlots() {
     if (!meta.plots.length) {
         const empty = document.createElement('div');
         empty.className = 'pp-empty';
-        empty.textContent = planning ? '' : '아직 개요가 없어요.';
+        empty.textContent = planning ? '생성 중…' : '아직 개요가 없어요.';
         list.appendChild(empty);
         return;
     }
